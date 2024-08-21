@@ -71,5 +71,18 @@ namespace InteractableExfilsAPI.Singletons
 
             return session;
         }
+
+        public static bool ExfilHasRequirement(ExfiltrationPoint exfil, ERequirementState requirement)
+        {
+            bool result = false;
+
+            foreach (var req in exfil.Requirements)
+            {
+                if (req.Requirement == requirement) result = true;
+                break;
+            }
+
+            return result;
+        }
     }
 }

@@ -38,7 +38,6 @@ namespace InteractableExfilsAPI.Patches
             var owner = __args[0] as GamePlayerOwner;
             var interactive = __args[1]; // as GInterface114 as of SPT 3.9.5
 
-
             if (interactive is CustomInteractable)
             {
                 var customInteractable = interactive as CustomInteractable;
@@ -50,25 +49,25 @@ namespace InteractableExfilsAPI.Patches
                 return false;
             }
 
-            /*
             if (interactive is ExfiltrationPoint)
             {
-                Plugin.LogSource.LogError("1");
-                ActionsReturnClass vanillaExfilActions = _getExfiltrationActions.Invoke(null, __args) as ActionsReturnClass;
-                Plugin.LogSource.LogError(vanillaExfilActions.Actions[0].Name);
-                Plugin.LogSource.LogError("2");
-                OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied((ExfiltrationPoint)interactive);
+                var exfil = interactive as ExfiltrationPoint;
+                //if (!InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return true;
 
-                Plugin.LogSource.LogError("3");
+                ActionsReturnClass vanillaExfilActions = _getExfiltrationActions.Invoke(null, __args) as ActionsReturnClass;
+                OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil);
+
+                List<ActionsTypesClass> actions = vanillaExfilActions == null
+                    ? eventResult.Actions
+                    : vanillaExfilActions.Actions.Concat(eventResult.Actions).ToList();
+
                 __result = new ActionsReturnClass
                 {
-                    Actions = vanillaExfilActions.Actions.Concat(eventResult.Actions).ToList()
+                    Actions = actions
                 };
-                Plugin.LogSource.LogError("");
+
                 return false;
             }
-            
-            */
             return true;
         }
     }

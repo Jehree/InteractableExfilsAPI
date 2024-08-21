@@ -31,44 +31,44 @@ namespace InteractableExfilsAPI.Components
                 Name = "Toggle Extraction Zone",
                 Action = () =>
                 {
-                    ToggleEnabled();
+                    ToggleExfilZoneEnabled();
                 }
             });
         }
 
-        private void Enable()
+        private void EnableExfilZone()
         {
-            gameObject.GetComponent<BoxCollider>().enabled = true;
+            Exfil.gameObject.GetComponent<BoxCollider>().enabled = true;
             Enabled = true;
         }
 
-        private void Disable()
+        private void DisableExfilZone()
         {
-            gameObject.GetComponent<BoxCollider>().enabled = false;
+            Exfil.gameObject.GetComponent<BoxCollider>().enabled = false;
             Enabled = false;
         }
 
-        public void SetEnabled(bool enabled)
+        public void SetExfilZoneEnabled(bool enabled)
         {
             if (enabled)
             {
-                Disable();
+                DisableExfilZone();
             }
             else
             {
-                Enable();
+                EnableExfilZone();
             }
         }
 
-        public void ToggleEnabled()
+        public void ToggleExfilZoneEnabled()
         {
             if (Enabled)
             {
-                Disable();
+                DisableExfilZone();
             }
             else
             {
-                Enable();
+                EnableExfilZone();
             }
         }
     }

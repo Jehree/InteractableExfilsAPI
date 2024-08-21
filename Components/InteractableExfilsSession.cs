@@ -57,14 +57,17 @@ namespace InteractableExfilsAPI.Components
         {
             foreach (var req in exfil.Requirements)
             {
-                if (req.Requirement == ERequirementState.TransferItem) return;
+                if (req.Requirement == ERequirementState.TransferItem)
+                {
+                    return;
+                }
             }
 
             GameObject gameObject = new GameObject();
             gameObject.AddComponent<BoxCollider>();
             var interactable = gameObject.AddComponent<ExfilInteractable>();
-            interactable.SetEnabled(!Settings.ExtractAreaStartsDisabled.Value);
             interactable.SetExfil(exfil);
+            interactable.SetExfilZoneEnabled(!Settings.ExtractAreaStartsDisabled.Value);
 
             gameObject.transform.position = obj.Position;
             gameObject.transform.rotation = obj.Rotation;
