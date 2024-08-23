@@ -119,6 +119,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "$(ProjectDir)\..\..\BepInEx\plugins\Jehree-InteractableExfilsAPI\$(TargetFileName)"</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "$(ProjectDir)\..\..\BepInEx\plugins\$(TargetFileName)"</PostBuildEvent>
   </PropertyGroup>
 </Project>

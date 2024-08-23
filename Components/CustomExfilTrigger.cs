@@ -6,6 +6,7 @@ using InteractableExfilsAPI.Common;
 using InteractableExfilsAPI.Helpers;
 using InteractableExfilsAPI.Singletons;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -95,12 +96,20 @@ namespace InteractableExfilsAPI.Components
                     ConsoleScreen.Log($"Map Id: {gameWorld.LocationId}");
                     ConsoleScreen.Log($"WORLD INFO:\n");
 
+                    List<string> exfilNames = new List<string>();
+                    foreach ( var exfil in player.gameObject.GetComponent<InteractableExfilsSession>().ActiveExfils)
+                    {
+                        exfilNames.Add(exfil.Settings.Name);
+                    }
+                    string combinedString = string.Join(", ", exfilNames);
+                    ConsoleScreen.Log(combinedString);
+                    ConsoleScreen.Log($"Active Exfils:");
                     ConsoleScreen.Log($"Player Rotation (Quaternion): {player.CameraPosition.rotation}");
                     ConsoleScreen.Log($"Player Rotation (Euler): {player.CameraPosition.rotation.eulerAngles}");
                     ConsoleScreen.Log($"Player Position: {player.gameObject.transform.position}");
                     ConsoleScreen.Log($"Profile Side: {player.Side.ToString()}");
                     ConsoleScreen.Log($"Profile Id: {player.ProfileId}");
-                    ConsoleScreen.Log($"PLAYER INFO:");
+                    ConsoleScreen.Log($"PLAYER INFO:\n");
 
                     Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.TradeOperationComplete);
                 }
@@ -111,14 +120,14 @@ namespace InteractableExfilsAPI.Components
         {
             Exfil.gameObject.GetComponent<BoxCollider>().enabled = true;
             ExfilEnabled = true;
-            Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.GeneratorTurnOn);
+            
         }
 
-        private void DisableExfilZone()
+        private void DisableExfilZone(bool mute = false)
         {
             Exfil.gameObject.GetComponent<BoxCollider>().enabled = false;
             ExfilEnabled = false;
-            Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.GeneratorTurnOff);
+            
         }
 
         public void SetExfilZoneEnabled(bool enabled)
@@ -138,10 +147,12 @@ namespace InteractableExfilsAPI.Components
             if (ExfilEnabled)
             {
                 DisableExfilZone();
+                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.GeneratorTurnOff);
             }
             else
             {
                 EnableExfilZone();
+                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.GeneratorTurnOn);
             }
         }
     }

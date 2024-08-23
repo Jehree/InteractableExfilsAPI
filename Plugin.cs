@@ -34,7 +34,7 @@ namespace InteractableExfilsAPI
             new GameStartedPatch().Enable();
             new GetAvailableActionsPatch().Enable();
 
-            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += Test;
+            // Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += Test;
         }
 
         public OnActionsAppliedResult Test(ExfiltrationPoint exfil, EPlayerSide side)
@@ -56,8 +56,6 @@ namespace InteractableExfilsAPI
             );
 
             var resultList = new List<CustomExfilAction>();
-            resultList.Add(customExfilAction);
-            resultList.Add(customExfilAction);
             resultList.Add(customExfilAction);
             var result = new OnActionsAppliedResult(resultList);
             return result;
