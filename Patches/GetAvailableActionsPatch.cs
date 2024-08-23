@@ -2,6 +2,7 @@
 using EFT;
 using EFT.Interactive;
 using HarmonyLib;
+using InteractableExfilsAPI.Common;
 using InteractableExfilsAPI.Components;
 using InteractableExfilsAPI.Singletons;
 using SPT.Reflection.Patching;
@@ -27,8 +28,6 @@ namespace InteractableExfilsAPI.Patches
                 method.GetParameters()[1].ParameterType == typeof(ExfiltrationPoint)
             );
 
-            Plugin.LogSource.LogError(_getExfiltrationActions.Name);
-
             return AccessTools.FirstMethod(typeof(GetActionsClass), method => method.Name == nameof(GetActionsClass.GetAvailableActions) && method.GetParameters()[0].Name == "owner");
         }
 
@@ -38,33 +37,22 @@ namespace InteractableExfilsAPI.Patches
             var owner = __args[0] as GamePlayerOwner;
             var interactive = __args[1]; // as GInterface114 as of SPT 3.9.5
 
-            if (interactive is CustomInteractable)
-            {
-                var customInteractable = interactive as CustomInteractable;
-
-                __result = new ActionsReturnClass()
-                {
-                    Actions = customInteractable.Actions
-                };
-                return false;
-            }
-
-            if (interactive is ExfiltrationPoint)
+            if (interactive is ExfiltrationPoint && InteractableExfilsService.ExfilHasRequirement((ExfiltrationPoint)interactive, ERequirementState.TransferItem))
             {
                 var exfil = interactive as ExfiltrationPoint;
-                //if (!InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return true;
 
                 ActionsReturnClass vanillaExfilActions = _getExfiltrationActions.Invoke(null, __args) as ActionsReturnClass;
-                OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil);
+                var player = Singleton<GameWorld>.Instance.MainPlayer;
+                OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil, player.Side);
 
-                List<ActionsTypesClass> actions = vanillaExfilActions == null
-                    ? eventResult.Actions
-                    : vanillaExfilActions.Actions.Concat(eventResult.Actions).ToList();
-
-                __result = new ActionsReturnClass
+                List<ActionsTypesClass> actions = new List<ActionsTypesClass>();
+                if (vanillaExfilActions != null)
                 {
-                    Actions = actions
-                };
+                    actions.AddRange(vanillaExfilActions.Actions);
+                }
+                actions.AddRange(CustomExfilAction.GetActionsTypesClassList(eventResult.Actions));
+
+                __result = new ActionsReturnClass { Actions = actions };
 
                 return false;
             }

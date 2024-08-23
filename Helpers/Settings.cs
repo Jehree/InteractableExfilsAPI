@@ -9,13 +9,20 @@ namespace InteractableExfilsAPI.Helpers
 {
     internal class Settings
     {
-        public static ConfigEntry<bool> ExtractAreaStartsDisabled;
+        public static ConfigEntry<bool> ExtractAreaStartsEnabled;
+        public static ConfigEntry<bool> DebugMode;
         
         public static void Init (ConfigFile config)
         {
-            ExtractAreaStartsDisabled = config.Bind(
+            ExtractAreaStartsEnabled = config.Bind(
                 "1: Settings",
-                "Extract Area Starts Disabled",
+                "Extract Area Defaults To Enabled",
+                true
+            );
+
+            DebugMode = config.Bind(
+                "2: Debug",
+                "Enable Debug Actions",
                 false
             );
         }

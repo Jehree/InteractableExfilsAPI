@@ -106,10 +106,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\CustomExfilAction.cs" />
     <Compile Include="Components\InteractableExfilsSession.cs" />
-    <Compile Include="Helpers\MapData.cs" />
     <Compile Include="Helpers\Settings.cs" />
-    <Compile Include="Components\Interactable.cs" />
+    <Compile Include="Components\CustomExfilTrigger.cs" />
     <Compile Include="Patches\GameEndedPatch.cs" />
     <Compile Include="Patches\GameStartedPatch.cs" />
     <Compile Include="Patches\GetAvailableActionsPatch.cs" />

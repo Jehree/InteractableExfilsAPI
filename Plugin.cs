@@ -1,8 +1,11 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using Comfort.Common;
+using EFT;
 using EFT.Interactive;
 using EFT.UI;
+using InteractableExfilsAPI.Common;
+using InteractableExfilsAPI.Components;
 using InteractableExfilsAPI.Helpers;
 using InteractableExfilsAPI.Patches;
 using InteractableExfilsAPI.Singletons;
@@ -29,22 +32,34 @@ namespace InteractableExfilsAPI
             Singleton<InteractableExfilsService>.Create(new InteractableExfilsService());
 
             new GameStartedPatch().Enable();
-            //new GameEndedPatch().Enable();
             new GetAvailableActionsPatch().Enable();
 
-            Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += Test;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += Test;
         }
 
-        public OnActionsAppliedResult Test(ExfiltrationPoint exfil)
+        public OnActionsAppliedResult Test(ExfiltrationPoint exfil, EPlayerSide side)
         {
-            var result = new OnActionsAppliedResult();
-            ActionsTypesClass action = new ActionsTypesClass
-            {
-                Name = "TEST",
-                Action = () => { ConsoleScreen.LogError($"TEST SUCCESS WOOOO {exfil.Settings.Name}"); }
-            };
-            result.Actions.Add(action);
+            if (exfil.Settings.Name != "Gate 3") return null;
+            if (side == EPlayerSide.Savage) return null;
 
+            CustomExfilAction customExfilAction = new CustomExfilAction(
+                "Get Exfil Tips",
+                false,
+                () =>
+                {
+                    var tips = exfil.GetTips(Singleton<GameWorld>.Instance.MainPlayer.ProfileId);
+                    foreach (var tip in tips)
+                    {
+                        ConsoleScreen.Log(tip);
+                    }
+                }
+            );
+
+            var resultList = new List<CustomExfilAction>();
+            resultList.Add(customExfilAction);
+            resultList.Add(customExfilAction);
+            resultList.Add(customExfilAction);
+            var result = new OnActionsAppliedResult(resultList);
             return result;
         }
     }

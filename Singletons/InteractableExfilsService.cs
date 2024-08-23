@@ -2,6 +2,7 @@
 using EFT;
 using EFT.Interactive;
 using EFT.UI;
+using InteractableExfilsAPI.Common;
 using InteractableExfilsAPI.Components;
 using InteractableExfilsAPI.Helpers;
 using System;
@@ -13,33 +14,56 @@ using UnityEngine;
 
 namespace InteractableExfilsAPI.Singletons
 {
+    /// <summary>
+    /// Event result containing actions, etc.<br/>
+    /// Return <see cref="null"/> to skip adding actions
+    /// </summary>
     public class OnActionsAppliedResult
     {
         public bool ExtractionToggleAvailable;
-        public List<ActionsTypesClass> Actions { get; private set; } = new List<ActionsTypesClass>();
+        public List<CustomExfilAction> Actions { get; private set; }
 
-        public OnActionsAppliedResult(bool extractionToggleAvailable = true)
+        public OnActionsAppliedResult()
         {
+            Actions = new List<CustomExfilAction>();
+            ExtractionToggleAvailable = true;
+        }
+
+        public OnActionsAppliedResult(CustomExfilAction action, bool extractionToggleAvailable = true)
+        {
+            Actions = new List<CustomExfilAction>();
             ExtractionToggleAvailable = extractionToggleAvailable;
+            if (action != null)
+            {
+                Actions.Add(action);
+            }
+        }
+
+        public OnActionsAppliedResult(List<CustomExfilAction> actions, bool extractionToggleAvailable = true)
+        {
+            Actions = new List<CustomExfilAction>();
+            ExtractionToggleAvailable = extractionToggleAvailable;
+            Actions.AddRange(actions);
         }
     }
 
     public class InteractableExfilsService
     {
-        public delegate OnActionsAppliedResult ActionsAppliedEventHandler(ExfiltrationPoint exfil);
+        public delegate OnActionsAppliedResult ActionsAppliedEventHandler(ExfiltrationPoint exfil, EPlayerSide side);
 
         // other mods can subscribe to this event and optionally pass ActionsTypesClass(es) back to be added to the interactable objects
         public event ActionsAppliedEventHandler OnActionsAppliedEvent;
 
-        public virtual OnActionsAppliedResult OnActionsApplied(ExfiltrationPoint exfil)
+        public virtual OnActionsAppliedResult OnActionsApplied(ExfiltrationPoint exfil, EPlayerSide side)
         {
             OnActionsAppliedResult result = new OnActionsAppliedResult();
-
             if (OnActionsAppliedEvent == null) return result;
 
             foreach (ActionsAppliedEventHandler handler in OnActionsAppliedEvent.GetInvocationList())
             {
-                OnActionsAppliedResult handlerResult = handler(exfil);
+                OnActionsAppliedResult handlerResult = handler(exfil, side);
+                if (handlerResult == null) continue;
+
                 result.Actions.AddRange(handlerResult.Actions);
                 if (handlerResult.ExtractionToggleAvailable == false)
                 {
@@ -74,15 +98,11 @@ namespace InteractableExfilsAPI.Singletons
 
         public static bool ExfilHasRequirement(ExfiltrationPoint exfil, ERequirementState requirement)
         {
-            bool result = false;
-
             foreach (var req in exfil.Requirements)
             {
-                if (req.Requirement == requirement) result = true;
-                break;
+                if (req.Requirement == requirement) return true;
             }
-
-            return result;
+            return false;
         }
     }
 }

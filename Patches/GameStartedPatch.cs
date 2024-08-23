@@ -26,11 +26,5 @@ namespace InteractableExfilsAPI.Patches
             player.gameObject.AddComponent<InteractableExfilsSession>();
             return true;
         }
-
-        [PatchPostfix]
-        public static void PatchPostfix()
-        {
-
-        }
     }
 }

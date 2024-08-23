@@ -4,6 +4,8 @@ using EFT.Interactive;
 using EFT.UI;
 using InteractableExfilsAPI.Helpers;
 using InteractableExfilsAPI.Singletons;
+using Koenigz.PerfectCulling.EFT;
+using SPT.Reflection.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,86 +19,70 @@ namespace InteractableExfilsAPI.Components
 {
     public class InteractableExfilsSession : MonoBehaviour
     {
-        public MapData MapData { get; private set; }
-        public Dictionary<string, ExfiltrationPoint> ActiveExfils { get; private set; } = new Dictionary<string, ExfiltrationPoint>();
-
+        public List<ExfiltrationPoint> ActiveExfils { get; private set; } = new List<ExfiltrationPoint>();
         public InteractableExfilsSession()
         {
-            InitMapData();
-            if (MapData == null)
-            {
-                string err = $"{Plugin.MOD_NAME}: No map data found for this map!";
-                ConsoleScreen.Log(err);
-                Plugin.LogSource.LogError(err);
-                return;
-            }
-
             FillActiveExtractList();
-            CreateAllInteractableObjects();
+            CreateAllCustomExfilTriggers();
         }
 
-        private void CreateAllInteractableObjects()
+        private void CreateAllCustomExfilTriggers()
         {
-            foreach (var obj in MapData.Objects)
+            foreach (var exfil in ActiveExfils)
             {
-                if (!ActiveExfils.ContainsKey(obj.Name)) continue;
-                ExfiltrationPoint exfil = ActiveExfils[obj.Name];
-                CreateInteractableObject(obj, exfil);
+                CreateCustomExfilTriggerObject(exfil);
             }
+        }
+
+        private void CreateCustomExfilTriggerObject(ExfiltrationPoint exfil)
+        {
+            if (InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return;
+
+            BoxCollider sourceCollider = exfil.gameObject.GetComponent<BoxCollider>();
+
+            GameObject customExfilTriggerObject = new GameObject();
+            customExfilTriggerObject.transform.parent = exfil.gameObject.transform; // this makes sure we are destroyed before the exfil zone is
+            customExfilTriggerObject.name = exfil.Settings.Name + "_custom_trigger";
+            customExfilTriggerObject.layer = LayerMask.NameToLayer("Triggers");
+
+            BoxCollider targetCollider = customExfilTriggerObject.AddComponent<BoxCollider>();
+            targetCollider.center = sourceCollider.center;
+            targetCollider.size = sourceCollider.size;
+            targetCollider.isTrigger = sourceCollider.isTrigger;
+
+            customExfilTriggerObject.transform.position = exfil.gameObject.transform.position;
+            customExfilTriggerObject.transform.rotation = exfil.gameObject.transform.rotation;
+            customExfilTriggerObject.transform.localScale = exfil.gameObject.transform.localScale;
+            CustomExfilTrigger customExfilTrigger = customExfilTriggerObject.AddComponent<CustomExfilTrigger>();
+            customExfilTrigger.SetExfil(exfil);
+
+            var player = Singleton<GameWorld>.Instance.MainPlayer;
+            OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil, player.Side);
+
+            if (eventResult.ExtractionToggleAvailable)
+            {
+                customExfilTrigger.AddExtractToggleAction();
+            }
+
+            customExfilTrigger.Actions.AddRange(eventResult.Actions);
+
+            return;
         }
 
         private void FillActiveExtractList()
         {
-            foreach (var point in Singleton<GameWorld>.Instance.ExfiltrationController.ExfiltrationPoints)
+            var gameWorld = Singleton<GameWorld>.Instance;
+            var player = gameWorld.MainPlayer;
+
+            ExfiltrationPoint[] exfils = player.Side == EPlayerSide.Savage
+                ? gameWorld.ExfiltrationController.ScavExfiltrationPoints
+                : gameWorld.ExfiltrationController.ExfiltrationPoints;
+
+            foreach (var exfil in exfils)
             {
-                ActiveExfils.Add(point.Settings.Name, point);
+                if (!exfil.InfiltrationMatch(gameWorld.MainPlayer)) continue;
+                ActiveExfils.Add(exfil);
             }
-        }
-
-        private void CreateInteractableObject(ObjectData obj, ExfiltrationPoint exfil)
-        {
-            foreach (var req in exfil.Requirements)
-            {
-                if (req.Requirement == ERequirementState.TransferItem)
-                {
-                    return;
-                }
-            }
-
-            GameObject gameObject = new GameObject();
-            gameObject.AddComponent<BoxCollider>();
-            var interactable = gameObject.AddComponent<ExfilInteractable>();
-            interactable.SetExfil(exfil);
-            interactable.SetExfilZoneEnabled(!Settings.ExtractAreaStartsDisabled.Value);
-
-            gameObject.transform.position = obj.Position;
-            gameObject.transform.rotation = obj.Rotation;
-            gameObject.transform.localScale = obj.Scale;
-            gameObject.layer = LayerMask.NameToLayer("Interactive");
-
-            OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil);
-
-            if (eventResult.ExtractionToggleAvailable)
-            {
-                interactable.AddExtractToggleAction();
-            }
-
-            interactable.Actions.AddRange(eventResult.Actions);
-        }
-
-        private void InitMapData()
-        {
-            if (!Singleton<GameWorld>.Instantiated)
-            {
-                string errorMessage = "InteractableExfilsController tried to fetch map data when GameWorld singleton was not instantiated!";
-                Plugin.LogSource.LogError(errorMessage);
-                ConsoleScreen.LogError(errorMessage);
-                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ErrorMessage);
-                return;
-            }
-
-            string locId = Singleton<GameWorld>.Instance.LocationId;
-            MapData = MapData.Get(locId);
         }
     }
 }
