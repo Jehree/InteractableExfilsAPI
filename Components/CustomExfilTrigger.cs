@@ -21,7 +21,7 @@ namespace InteractableExfilsAPI.Components
         private bool _playerInTriggerArea = false;
         public bool ExfilEnabled { get; private set; } = true;
 
-        public void Update()
+        public void FixedUpdate()
         {
             if (!_playerInTriggerArea) return;
             Player player = Singleton<GameWorld>.Instance.MainPlayer;
@@ -29,10 +29,6 @@ namespace InteractableExfilsAPI.Components
             if (gamePlayerOwner.AvailableInteractionState.Value != null) return;
 
             var returnClass = new ActionsReturnClass { Actions = CustomExfilAction.GetActionsTypesClassList(Actions) };
-            if (Settings.DebugMode.Value)
-            {
-                returnClass.Actions.Add(GetDebugAction().GetActionsTypesClass());
-            }
             returnClass.InitSelected();
 
             gamePlayerOwner.AvailableInteractionState.Value = returnClass;
@@ -67,53 +63,31 @@ namespace InteractableExfilsAPI.Components
 
         public void AddExtractToggleAction()
         {
+            /*
             Actions.Insert(0, new CustomExfilAction(
                 "Extract",
-                Exfil.UnmetRequirements(Singleton<GameWorld>.Instance.MainPlayer).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>,
-                ToggleExfilZoneEnabled
-            ));
-        }
-
-        public CustomExfilAction GetDebugAction()
-        {
-            return new CustomExfilAction(
-                "Print Debug Info To Console",
-                false,
                 () =>
                 {
-                    var gameWorld = Singleton<GameWorld>.Instance;
-                    var player = gameWorld.MainPlayer;
+                    var player = Singleton<GameWorld>.Instance.MainPlayer;
+                    if (!Exfil.HasRequirements) return false;
+                    if (Exfil.HasMetRequirements(player.ProfileId)) return false;
+                    //if (Exfil.UnmetRequirements(Singleton<GameWorld>.Instance.MainPlayer).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>())
+                    //-116.9174 -18 169.2975
+                    // labs ele switch -276.1301 -2.3366 -364.7404
+                    // labs sewer -131.3852 -5.4804 -266.646
+                    // labs cargo switch -122.9479 -4 -355.3093
+                    // labs cargo ele -118.9453 4 -406.0783
+                    return true;
+                },
+                ToggleExfilZoneEnabled
+            ));
+            */
 
-                    foreach (var req in Exfil.Requirements)
-                    {
-                        ConsoleScreen.Log($"... {req.Requirement.ToString()}");
-                    }
-                    ConsoleScreen.Log($"Requirements: ");
-                    ConsoleScreen.Log($"Chance: {Exfil.Settings.Chance}");
-                    ConsoleScreen.Log($"Exfil Id: {Exfil.Settings.Name}");
-                    ConsoleScreen.Log($"EXFIL INFO:\n");
-
-                    ConsoleScreen.Log($"Map Id: {gameWorld.LocationId}");
-                    ConsoleScreen.Log($"WORLD INFO:\n");
-
-                    List<string> exfilNames = new List<string>();
-                    foreach ( var exfil in player.gameObject.GetComponent<InteractableExfilsSession>().ActiveExfils)
-                    {
-                        exfilNames.Add(exfil.Settings.Name);
-                    }
-                    string combinedString = string.Join(", ", exfilNames);
-                    ConsoleScreen.Log(combinedString);
-                    ConsoleScreen.Log($"Active Exfils:");
-                    ConsoleScreen.Log($"Player Rotation (Quaternion): {player.CameraPosition.rotation}");
-                    ConsoleScreen.Log($"Player Rotation (Euler): {player.CameraPosition.rotation.eulerAngles}");
-                    ConsoleScreen.Log($"Player Position: {player.gameObject.transform.position}");
-                    ConsoleScreen.Log($"Profile Side: {player.Side.ToString()}");
-                    ConsoleScreen.Log($"Profile Id: {player.ProfileId}");
-                    ConsoleScreen.Log($"PLAYER INFO:\n");
-
-                    Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.TradeOperationComplete);
-                }
-            );
+            Actions.Insert(0, new CustomExfilAction(
+                "Extract",
+                false,
+                ToggleExfilZoneEnabled
+            ));
         }
 
         private void EnableExfilZone()
@@ -144,6 +118,26 @@ namespace InteractableExfilsAPI.Components
 
         public void ToggleExfilZoneEnabled()
         {
+            var player = Singleton<GameWorld>.Instance.MainPlayer;
+
+
+
+            if (Exfil.HasRequirements && !Exfil.HasMetRequirements(player.ProfileId))
+            {
+                if (!Exfil.UnmetRequirements(player).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>())
+                {
+                    Singleton<InteractableExfilsService>.Instance.AddPlayerToPlayersMetAllRequirements(Exfil, player.ProfileId);
+                    ToggleExfilZoneEnabled();
+                    return;
+                }
+
+                string tips = string.Join(", ", Exfil.GetTips(player.ProfileId));
+                ConsoleScreen.Log($"You have not met the extract requirements for {Exfil.Settings.Name}!");
+                NotificationManagerClass.DisplayWarningNotification($"{tips}");
+                Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ErrorMessage);
+                return;
+            }
+
             if (ExfilEnabled)
             {
                 DisableExfilZone();

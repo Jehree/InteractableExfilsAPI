@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace InteractableExfilsAPI
 {
-    [BepInPlugin("Jehree.InteractableExfilsAPI", "InteractableExfilsAPI", "1.0.0")]
+    [BepInPlugin("Jehree.InteractableExfilsAPI", "InteractableExfilsAPI", "1.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         public static ManualLogSource LogSource;
@@ -33,26 +33,19 @@ namespace InteractableExfilsAPI
 
             new GameStartedPatch().Enable();
             new GetAvailableActionsPatch().Enable();
-
-            // Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += Test;
         }
 
-        public OnActionsAppliedResult Test(ExfiltrationPoint exfil, EPlayerSide side)
+        private void Start()
         {
-            if (exfil.Settings.Name != "Gate 3") return null;
-            if (side == EPlayerSide.Savage) return null;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += ExampleMethod;
+        }
 
+        public OnActionsAppliedResult ExampleMethod(ExfiltrationPoint exfil, EPlayerSide side)
+        {
             CustomExfilAction customExfilAction = new CustomExfilAction(
-                "Get Exfil Tips",
+                "Another Example Action",
                 false,
-                () =>
-                {
-                    var tips = exfil.GetTips(Singleton<GameWorld>.Instance.MainPlayer.ProfileId);
-                    foreach (var tip in tips)
-                    {
-                        ConsoleScreen.Log(tip);
-                    }
-                }
+                () => { ConsoleScreen.Log($"Interaction with {exfil.Settings.Name} was a success!!"); }
             );
 
             var resultList = new List<CustomExfilAction>();

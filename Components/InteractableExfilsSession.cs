@@ -36,7 +36,7 @@ namespace InteractableExfilsAPI.Components
 
         private void CreateCustomExfilTriggerObject(ExfiltrationPoint exfil)
         {
-            if (InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return;
+            if (ExfilIsCar(exfil) || InteractableExfilsService.ExfilIsElevator(exfil)) return; // these are handled in the GetAvailableActionsPatch
 
             BoxCollider sourceCollider = exfil.gameObject.GetComponent<BoxCollider>();
 
@@ -65,8 +65,6 @@ namespace InteractableExfilsAPI.Components
             }
 
             customExfilTrigger.Actions.AddRange(eventResult.Actions);
-
-            return;
         }
 
         private void FillActiveExtractList()
@@ -83,6 +81,12 @@ namespace InteractableExfilsAPI.Components
                 if (!exfil.InfiltrationMatch(gameWorld.MainPlayer)) continue;
                 ActiveExfils.Add(exfil);
             }
+        }
+
+        private bool ExfilIsCar(ExfiltrationPoint exfil)
+        {
+            if (InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return true;
+            return false;
         }
     }
 }
