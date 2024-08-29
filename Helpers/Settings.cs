@@ -24,7 +24,7 @@ namespace InteractableExfilsAPI.Helpers
             InactiveExtractsDisplayUnavailable = config.Bind(
                 "1: Settings",
                 "Unnavailable Extracts Display as Unavailable",
-                true
+                false
             );
 
             DebugMode = config.Bind(
