@@ -22,66 +22,55 @@ namespace InteractableExfilsAPI.Singletons
     /// </summary>
     public class OnActionsAppliedResult
     {
-        public bool ExtractionToggleAvailable;
         public List<CustomExfilAction> Actions { get; private set; }
         public OnActionsAppliedResult()
         {
             Actions = new List<CustomExfilAction>();
-            ExtractionToggleAvailable = true;
         }
 
-        public OnActionsAppliedResult(CustomExfilAction action, bool extractionToggleAvailable = true)
+        public OnActionsAppliedResult(CustomExfilAction action)
         {
             Actions = new List<CustomExfilAction>();
-            ExtractionToggleAvailable = extractionToggleAvailable;
             if (action != null)
             {
                 Actions.Add(action);
             }
         }
 
-        public OnActionsAppliedResult(List<CustomExfilAction> actions, bool extractionToggleAvailable = true)
+        public OnActionsAppliedResult(List<CustomExfilAction> actions)
         {
             Actions = new List<CustomExfilAction>();
-            ExtractionToggleAvailable = extractionToggleAvailable;
             Actions.AddRange(actions);
         }
     }
 
     public class InteractableExfilsService
     {
-        public delegate OnActionsAppliedResult ActionsAppliedEventHandler(ExfiltrationPoint exfil, EPlayerSide side);
+        public delegate OnActionsAppliedResult ActionsAppliedEventHandler(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer);
 
         // other mods can subscribe to this event and optionally pass ActionsTypesClass(es) back to be added to the interactable objects
         public event ActionsAppliedEventHandler OnActionsAppliedEvent;
         private FieldInfo _exfilPlayersMetAllRequirementsFieldInfo = AccessTools.Field(typeof(ExfiltrationPoint), "_playersMetAllRequirements");
 
-
-        public virtual OnActionsAppliedResult OnActionsApplied(ExfiltrationPoint exfil, EPlayerSide side)
+        public virtual OnActionsAppliedResult OnActionsApplied(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer)
         {
             OnActionsAppliedResult result = new OnActionsAppliedResult();
-            if (OnActionsAppliedEvent == null) return result;
 
-            foreach (ActionsAppliedEventHandler handler in OnActionsAppliedEvent.GetInvocationList())
+            if (OnActionsAppliedEvent != null)
             {
-                OnActionsAppliedResult handlerResult = handler(exfil, side);
-                if (handlerResult == null) continue;
-
-                result.Actions.AddRange(handlerResult.Actions);
-                if (handlerResult.ExtractionToggleAvailable == false)
+                foreach (ActionsAppliedEventHandler handler in OnActionsAppliedEvent.GetInvocationList())
                 {
-                    result.ExtractionToggleAvailable = false;
-                }
+                    OnActionsAppliedResult handlerResult = handler(exfil, customExfilTrigger, exfilIsAvailableToPlayer);
+                    if (handlerResult == null) continue;
 
-                if (Settings.DebugMode.Value)
-                {
-                    result.Actions.Add(GetDebugAction(exfil));
+                    result.Actions.AddRange(handlerResult.Actions);
                 }
             }
+
             return result;
         }
 
-        public CustomExfilAction GetDebugAction(ExfiltrationPoint exfil)
+        public static CustomExfilAction GetDebugAction(ExfiltrationPoint exfil)
         {
             return new CustomExfilAction(
                 "Print Debug Info To Console",
@@ -120,6 +109,15 @@ namespace InteractableExfilsAPI.Singletons
 
                     Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.TradeOperationComplete);
                 }
+            );
+        }
+
+        public static CustomExfilAction GetExfilToggleAction(CustomExfilTrigger customExfilTrigger)
+        {
+            return new CustomExfilAction(
+                "Extract",
+                false,
+                customExfilTrigger.ToggleExfilZoneEnabled
             );
         }
 
@@ -162,12 +160,52 @@ namespace InteractableExfilsAPI.Singletons
             return false;
         }
 
+        public static bool ExfilIsCar(ExfiltrationPoint exfil)
+        {
+            if (ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return true;
+            return false;
+        }
+
         public void AddPlayerToPlayersMetAllRequirements(ExfiltrationPoint exfil, string profileId)
         {
             List<string> playerIdList = this._exfilPlayersMetAllRequirementsFieldInfo.GetValue(exfil) as List<string>;
             if (playerIdList.Contains(profileId)) return;
             playerIdList.Add(profileId);
             _exfilPlayersMetAllRequirementsFieldInfo.SetValue(exfil, playerIdList);
+        }
+
+        public OnActionsAppliedResult ApplyUnavailableExtractAction(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer)
+        {
+            if (!Settings.InactiveExtractsDisplayUnavailable.Value) return null;
+            if (exfilIsAvailableToPlayer) return null;
+            if (customExfilTrigger == null) return null; // exfil is car or labs elevator or other extract we aren't making a trigger for
+
+            CustomExfilAction customExfilAction = new CustomExfilAction(
+                "Extract Unavailable",
+                true,
+                () => { Plugin.LogSource.LogInfo("this won't ever run"); }
+            );
+
+            return new OnActionsAppliedResult(customExfilAction);
+        }
+
+        public OnActionsAppliedResult ApplyExtractToggleAction(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer)
+        {
+            if (!exfilIsAvailableToPlayer) return null;
+            if (customExfilTrigger == null) return null; // exfil is car or labs elevator or other extract we aren't making a trigger for
+
+            CustomExfilAction customExfilAction = GetExfilToggleAction(customExfilTrigger);
+
+            return new OnActionsAppliedResult(customExfilAction);
+        }
+
+        public OnActionsAppliedResult ApplyDebugAction(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer)
+        {
+            if (!Settings.DebugMode.Value) return null;
+
+            CustomExfilAction customExfilAction = GetDebugAction(exfil);
+
+            return new OnActionsAppliedResult(customExfilAction);
         }
     }
 }

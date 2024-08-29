@@ -108,6 +108,7 @@
   <ItemGroup>
     <Compile Include="Common\CustomExfilAction.cs" />
     <Compile Include="Components\InteractableExfilsSession.cs" />
+    <Compile Include="Examples.cs" />
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Components\CustomExfilTrigger.cs" />
     <Compile Include="Patches\GameEndedPatch.cs" />

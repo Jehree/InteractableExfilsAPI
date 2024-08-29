@@ -29,7 +29,12 @@ namespace InteractableExfilsAPI
         {
             LogSource = Logger;
             Settings.Init(Config);
+
             Singleton<InteractableExfilsService>.Create(new InteractableExfilsService());
+            InteractableExfilsService service = Singleton<InteractableExfilsService>.Instance;
+            service.OnActionsAppliedEvent += service.ApplyUnavailableExtractAction;
+            service.OnActionsAppliedEvent += service.ApplyExtractToggleAction;
+            service.OnActionsAppliedEvent += service.ApplyDebugAction;
 
             new GameStartedPatch().Enable();
             new GetAvailableActionsPatch().Enable();
@@ -37,21 +42,14 @@ namespace InteractableExfilsAPI
 
         private void Start()
         {
-            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += ExampleMethod;
+            //Examples examplesClass = new Examples();
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += examplesClass.SimpleExample;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += examplesClass.GoneWhenDisabledExample;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += examplesClass.DynamicDisabledExample;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += examplesClass.SoftDynamicDisabledExample;
+            //Singleton<InteractableExfilsService>.Instance.OnActionsAppliedEvent += examplesClass.ScavGate3OnlyExample;
         }
 
-        public OnActionsAppliedResult ExampleMethod(ExfiltrationPoint exfil, EPlayerSide side)
-        {
-            CustomExfilAction customExfilAction = new CustomExfilAction(
-                "Another Example Action",
-                false,
-                () => { ConsoleScreen.Log($"Interaction with {exfil.Settings.Name} was a success!!"); }
-            );
 
-            var resultList = new List<CustomExfilAction>();
-            resultList.Add(customExfilAction);
-            var result = new OnActionsAppliedResult(resultList);
-            return result;
-        }
     }
 }

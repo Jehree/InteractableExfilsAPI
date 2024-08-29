@@ -10,13 +10,20 @@ namespace InteractableExfilsAPI.Helpers
     internal class Settings
     {
         public static ConfigEntry<bool> ExtractAreaStartsEnabled;
+        public static ConfigEntry<bool> InactiveExtractsDisplayUnavailable;
         public static ConfigEntry<bool> DebugMode;
         
         public static void Init (ConfigFile config)
         {
             ExtractAreaStartsEnabled = config.Bind(
                 "1: Settings",
-                "Extract Area Defaults To Enabled",
+                "Extract Timer Starts Automatically",
+                true
+            );
+
+            InactiveExtractsDisplayUnavailable = config.Bind(
+                "1: Settings",
+                "Unnavailable Extracts Display as Unavailable",
                 true
             );
 

@@ -20,28 +20,44 @@ namespace InteractableExfilsAPI.Components
     public class InteractableExfilsSession : MonoBehaviour
     {
         public List<ExfiltrationPoint> ActiveExfils { get; private set; } = new List<ExfiltrationPoint>();
+        public List<ExfiltrationPoint> InactiveExfils { get; private set; } = new List<ExfiltrationPoint>();
+        public List<CustomExfilTrigger> CustomExfilTriggers { get; private set; } = new List<CustomExfilTrigger>();
+
+
         public InteractableExfilsSession()
         {
-            FillActiveExtractList();
+            FillExfilLists();
             CreateAllCustomExfilTriggers();
+        }
+
+        public void OnDestroy()
+        {
+            // destroy all triggers to avoid end of raid null refs
+            foreach (var trigger in CustomExfilTriggers)
+            {
+                GameObject.Destroy(trigger.gameObject);
+            }
         }
 
         private void CreateAllCustomExfilTriggers()
         {
             foreach (var exfil in ActiveExfils)
             {
-                CreateCustomExfilTriggerObject(exfil);
+                if (InteractableExfilsService.ExfilIsCar(exfil) || InteractableExfilsService.ExfilIsElevator(exfil)) continue;
+                CreateCustomExfilTriggerObject(exfil, true);
+            }
+            foreach (var exfil in InactiveExfils)
+            {
+                if (InteractableExfilsService.ExfilIsCar(exfil) || InteractableExfilsService.ExfilIsElevator(exfil)) continue;
+                CreateCustomExfilTriggerObject(exfil, false);
             }
         }
 
-        private void CreateCustomExfilTriggerObject(ExfiltrationPoint exfil)
+        private void CreateCustomExfilTriggerObject(ExfiltrationPoint exfil, bool exfilIsActiveToPlayer)
         {
-            if (ExfilIsCar(exfil) || InteractableExfilsService.ExfilIsElevator(exfil)) return; // these are handled in the GetAvailableActionsPatch
-
             BoxCollider sourceCollider = exfil.gameObject.GetComponent<BoxCollider>();
 
             GameObject customExfilTriggerObject = new GameObject();
-            customExfilTriggerObject.transform.parent = exfil.gameObject.transform; // this makes sure we are destroyed before the exfil zone is
             customExfilTriggerObject.name = exfil.Settings.Name + "_custom_trigger";
             customExfilTriggerObject.layer = LayerMask.NameToLayer("Triggers");
 
@@ -54,20 +70,13 @@ namespace InteractableExfilsAPI.Components
             customExfilTriggerObject.transform.rotation = exfil.gameObject.transform.rotation;
             customExfilTriggerObject.transform.localScale = exfil.gameObject.transform.localScale;
             CustomExfilTrigger customExfilTrigger = customExfilTriggerObject.AddComponent<CustomExfilTrigger>();
+
             customExfilTrigger.SetExfil(exfil);
-
-            var player = Singleton<GameWorld>.Instance.MainPlayer;
-            OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(exfil, player.Side);
-
-            if (eventResult.ExtractionToggleAvailable)
-            {
-                customExfilTrigger.AddExtractToggleAction();
-            }
-
-            customExfilTrigger.Actions.AddRange(eventResult.Actions);
+            customExfilTrigger.SetExfilIsActiveToPlayer(exfilIsActiveToPlayer);
+            CustomExfilTriggers.Add(customExfilTrigger);
         }
 
-        private void FillActiveExtractList()
+        private void FillExfilLists()
         {
             var gameWorld = Singleton<GameWorld>.Instance;
             var player = gameWorld.MainPlayer;
@@ -76,17 +85,38 @@ namespace InteractableExfilsAPI.Components
                 ? gameWorld.ExfiltrationController.ScavExfiltrationPoints
                 : gameWorld.ExfiltrationController.ExfiltrationPoints;
 
-            foreach (var exfil in exfils)
+            ExfiltrationPoint[] pmcExfils = gameWorld.ExfiltrationController.ExfiltrationPoints;
+            ExfiltrationPoint[] scavExfils = gameWorld.ExfiltrationController.ScavExfiltrationPoints;
+
+
+            if (player.Side == EPlayerSide.Savage)
             {
-                if (!exfil.InfiltrationMatch(gameWorld.MainPlayer)) continue;
-                ActiveExfils.Add(exfil);
+                AddExfils(scavExfils, pmcExfils);
+            }
+            else
+            {
+                AddExfils(pmcExfils, scavExfils);
             }
         }
 
-        private bool ExfilIsCar(ExfiltrationPoint exfil)
+        private void AddExfils(ExfiltrationPoint[] sameSideExfils, ExfiltrationPoint[] oppositeSideExfils)
         {
-            if (InteractableExfilsService.ExfilHasRequirement(exfil, ERequirementState.TransferItem)) return true;
-            return false;
+            foreach (var exfil in sameSideExfils)
+            {
+                if (exfil.InfiltrationMatch(Singleton<GameWorld>.Instance.MainPlayer))
+                {
+                    ActiveExfils.Add(exfil);
+                }
+                else
+                {
+                    InactiveExfils.Add(exfil);
+                }
+            }
+
+            foreach (var exfil in oppositeSideExfils)
+            {
+                InactiveExfils.Add(exfil);
+            }
         }
     }
 }

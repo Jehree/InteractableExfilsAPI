@@ -15,29 +15,40 @@ namespace InteractableExfilsAPI.Components
 {
     public class CustomExfilTrigger : MonoBehaviour, IPhysicsTrigger
     {
-        public List<CustomExfilAction> Actions = new List<CustomExfilAction>();
         public ExfiltrationPoint Exfil { get; private set; }
-        public string Description { get; } = "Custom Trigger";
-        private bool _playerInTriggerArea = false;
+        public string Description { get; } = "Custom Exfil Trigger";
         public bool ExfilEnabled { get; private set; } = true;
+        public bool ExfilIsActiveToPlayer { get; private set; }
+        private bool _playerInTriggerArea = false;
 
-        public void FixedUpdate()
+        // it isn't normally necessary to cache these classes, but we are using them in FixedUpdate() so I feel it is best practice here
+        private GameWorld _gameWorld;
+        private Player _player;
+        private GamePlayerOwner _gamePlayerOwner;
+
+        public void Awake()
+        {
+            _gameWorld = Singleton<GameWorld>.Instance;
+            _player = _gameWorld.MainPlayer;
+            _gamePlayerOwner = _player.gameObject.GetComponent<GamePlayerOwner>();
+        }
+
+        public void Update()
         {
             if (!_playerInTriggerArea) return;
-            Player player = Singleton<GameWorld>.Instance.MainPlayer;
-            GamePlayerOwner gamePlayerOwner = player.GetComponent<GamePlayerOwner>();
-            if (gamePlayerOwner.AvailableInteractionState.Value != null) return;
+            if (_gamePlayerOwner.AvailableInteractionState.Value != null) return;
 
-            var returnClass = new ActionsReturnClass { Actions = CustomExfilAction.GetActionsTypesClassList(Actions) };
+            OnActionsAppliedResult eventResult = Singleton<InteractableExfilsService>.Instance.OnActionsApplied(Exfil, this, ExfilIsActiveToPlayer);
+            var returnClass = new ActionsReturnClass { Actions = CustomExfilAction.GetActionsTypesClassList(eventResult.Actions) };
             returnClass.InitSelected();
 
-            gamePlayerOwner.AvailableInteractionState.Value = returnClass;
+            _gamePlayerOwner.AvailableInteractionState.Value = returnClass;
         }
 
         public void OnTriggerEnter(Collider collider)
         {
             Player player = Singleton<GameWorld>.Instance.GetPlayerByCollider(collider);
-            if (player == Singleton<GameWorld>.Instance.MainPlayer)
+            if (player == _player)
             {
                 _playerInTriggerArea = true;
                 SetExfilZoneEnabled(Settings.ExtractAreaStartsEnabled.Value);
@@ -47,11 +58,10 @@ namespace InteractableExfilsAPI.Components
         public void OnTriggerExit(Collider collider)
         {
             Player player = Singleton<GameWorld>.Instance.GetPlayerByCollider(collider);
-            if (player == Singleton<GameWorld>.Instance.MainPlayer)
+            if (player == _player)
             {
                 _playerInTriggerArea = false;
-                GamePlayerOwner gamePlayerOwner = player.GetComponent<GamePlayerOwner>();
-                gamePlayerOwner.ClearInteractionState();
+                _gamePlayerOwner.ClearInteractionState();
                 SetExfilZoneEnabled(true);
             }
         }
@@ -61,34 +71,16 @@ namespace InteractableExfilsAPI.Components
             Exfil = exfil;
         }
 
-        public void AddExtractToggleAction()
+        public void SetExfilIsActiveToPlayer(bool exfilIsActiveToPlayer)
         {
-            /*
-            Actions.Insert(0, new CustomExfilAction(
-                "Extract",
-                () =>
-                {
-                    var player = Singleton<GameWorld>.Instance.MainPlayer;
-                    if (!Exfil.HasRequirements) return false;
-                    if (Exfil.HasMetRequirements(player.ProfileId)) return false;
-                    //if (Exfil.UnmetRequirements(Singleton<GameWorld>.Instance.MainPlayer).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>())
-                    //-116.9174 -18 169.2975
-                    // labs ele switch -276.1301 -2.3366 -364.7404
-                    // labs sewer -131.3852 -5.4804 -266.646
-                    // labs cargo switch -122.9479 -4 -355.3093
-                    // labs cargo ele -118.9453 4 -406.0783
-                    return true;
-                },
-                ToggleExfilZoneEnabled
-            ));
-            */
-
-            Actions.Insert(0, new CustomExfilAction(
-                "Extract",
-                false,
-                ToggleExfilZoneEnabled
-            ));
+            ExfilIsActiveToPlayer = exfilIsActiveToPlayer;
         }
+
+        //-116.9174 -18 169.2975
+        // labs ele switch -276.1301 -2.3366 -364.7404
+        // labs sewer -131.3852 -5.4804 -266.646
+        // labs cargo switch -122.9479 -4 -355.3093
+        // labs cargo ele -118.9453 4 -406.0783
 
         private void EnableExfilZone()
         {
@@ -97,7 +89,7 @@ namespace InteractableExfilsAPI.Components
             
         }
 
-        private void DisableExfilZone(bool mute = false)
+        private void DisableExfilZone()
         {
             Exfil.gameObject.GetComponent<BoxCollider>().enabled = false;
             ExfilEnabled = false;
@@ -118,20 +110,16 @@ namespace InteractableExfilsAPI.Components
 
         public void ToggleExfilZoneEnabled()
         {
-            var player = Singleton<GameWorld>.Instance.MainPlayer;
-
-
-
-            if (Exfil.HasRequirements && !Exfil.HasMetRequirements(player.ProfileId))
+            if (Exfil.HasRequirements && !Exfil.HasMetRequirements(_player.ProfileId))
             {
-                if (!Exfil.UnmetRequirements(player).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>())
+                if (!Exfil.UnmetRequirements(_player).ToArray<ExfiltrationRequirement>().Any<ExfiltrationRequirement>())
                 {
-                    Singleton<InteractableExfilsService>.Instance.AddPlayerToPlayersMetAllRequirements(Exfil, player.ProfileId);
+                    Singleton<InteractableExfilsService>.Instance.AddPlayerToPlayersMetAllRequirements(Exfil, _player.ProfileId);
                     ToggleExfilZoneEnabled();
                     return;
                 }
 
-                string tips = string.Join(", ", Exfil.GetTips(player.ProfileId));
+                string tips = string.Join(", ", Exfil.GetTips(_player.ProfileId));
                 ConsoleScreen.Log($"You have not met the extract requirements for {Exfil.Settings.Name}!");
                 NotificationManagerClass.DisplayWarningNotification($"{tips}");
                 Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ErrorMessage);
