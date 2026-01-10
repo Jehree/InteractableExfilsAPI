@@ -85,7 +85,9 @@
     </Reference>
   </ItemGroup>
 
-  <PropertyGroup>
-    <PostBuildEvent>copy "$(SolutionDir)\bin\Debug\net471\$(AssemblyName).dll" "$(SolutionDir)\$(PathToSPT)\BepInEx\plugins\$(AssemblyName)\$(AssemblyName).dll"</PostBuildEvent>
-  </PropertyGroup>
+  <PropertyGroup />
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="set MOD_DIR=$(ProjectDir)\..\..\BepInEx\plugins\$(AssemblyName)&#xD;&#xA;if not exist &quot;%25MOD_DIR%25&quot; mkdir &quot;%25MOD_DIR%25&quot;&#xD;&#xA;copy &quot;$(TargetPath)&quot; &quot;%25MOD_DIR%25\$(TargetFileName)&quot;&#xD;&#xA;copy &quot;$(ProjectDir)LICENSE.txt&quot; &quot;%25MOD_DIR%25&quot;" />
+  </Target>
 </Project>

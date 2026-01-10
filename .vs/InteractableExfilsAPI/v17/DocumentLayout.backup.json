@@ -57,7 +57,8 @@
               "RelativeToolTip": "..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
               "ViewState": "AgIAAHYXAAAAAAAAAAAQwJgXAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2026-01-10T20:48:59.694Z"
+              "WhenOpened": "2026-01-10T20:48:59.694Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -68,7 +69,8 @@
               "ToolTip": "C:\\SP Tarkov\\SPT4.0.X\\Dev\\SPT-InteractableExfilsAPI\\InteractableExfilsAPI.csproj",
               "RelativeToolTip": "InteractableExfilsAPI.csproj",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-03-25T19:09:55.036Z"
+              "WhenOpened": "2025-03-25T19:09:55.036Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
