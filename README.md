@@ -42,7 +42,7 @@ public static class Examples
             isDisabled,
             () => {
                 // This part of the code is ran when the player interact with this prompt item
-                NotificationManagerClass.DisplayMessageNotification("Simple Interaction Example Selected!");
+                NotificationManager.DisplayMessageNotification("Simple Interaction Example Selected!");
             }
         );
 

@@ -1,4 +1,5 @@
 ﻿using Comfort.Common;
+using Diz.Binding;
 using EFT;
 using EFT.Interactive;
 using EFT.UI;
@@ -63,7 +64,7 @@ namespace InteractableExfilsAPI.Singletons
 
     public class InteractableExfilsService
     {
-        // other mods can subscribe to this event and optionally pass ActionsTypesClass(es) back to be added to the interactable objects
+        // other mods can subscribe to this event and optionally pass InteractionAction(es) back to be added to the interactable objects
         public event ActionsAppliedEventHandler OnActionsAppliedEvent;
         public delegate OnActionsAppliedResult ActionsAppliedEventHandler(ExfiltrationPoint exfil, CustomExfilTrigger customExfilTrigger, bool exfilIsAvailableToPlayer);
         public bool DisableVanillaActions { get; set; } = false;
@@ -177,7 +178,7 @@ namespace InteractableExfilsAPI.Singletons
         /// Get the current prompt state for current player
         /// </summary>
         /// <returns></returns>
-        public static BindableStateClass<ActionsReturnClass> GetAvailableInteractionState()
+        public static BindableState<AvailableInteractionState> GetAvailableInteractionState()
         {
             var session = GetSession();
             if (session == null)

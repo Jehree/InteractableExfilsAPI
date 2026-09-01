@@ -2,6 +2,7 @@
 using EFT;
 using InteractableExfilsAPI.Common;
 using InteractableExfilsAPI.Singletons;
+using EFT.Communications;
 using EFT.UI;
 using InteractableExfilsAPI.Helpers;
 using Comfort.Common;
@@ -18,7 +19,7 @@ namespace InteractableExfilsAPI
             CustomExfilAction customExfilAction = new CustomExfilAction(
                 "Example Interaction",
                 false,
-                () => { NotificationManagerClass.DisplayMessageNotification("Simple Interaction Example Selected!"); }
+                () => { NotificationManager.DisplayMessageNotification("Simple Interaction Example Selected!"); }
             );
 
             return new OnActionsAppliedResult(customExfilAction);
@@ -41,7 +42,7 @@ namespace InteractableExfilsAPI
             CustomExfilAction customExfilAction = new CustomExfilAction(
                 "Example Scav Only Gate 3 Interaction",
                 false,
-                () => { NotificationManagerClass.DisplayMessageNotification($"Simple Interaction Example Selected by profile: {player.ProfileId}"); }
+                () => { NotificationManager.DisplayMessageNotification($"Simple Interaction Example Selected by profile: {player.ProfileId}"); }
             );
 
             return new OnActionsAppliedResult(customExfilAction);
@@ -54,7 +55,7 @@ namespace InteractableExfilsAPI
             CustomExfilAction customExfilAction = new CustomExfilAction(
                 "I'm only active when Debug Mode is on (hard disable)",
                 !Settings.DebugMode.Value,
-                () => { NotificationManagerClass.DisplayMessageNotification("Dynamic Disabled Example (hard) Selected!"); }
+                () => { NotificationManager.DisplayMessageNotification("Dynamic Disabled Example (hard) Selected!"); }
             );
 
             return new OnActionsAppliedResult(customExfilAction);
@@ -70,7 +71,7 @@ namespace InteractableExfilsAPI
             CustomExfilAction customExfilAction = new CustomExfilAction(
                 "I'm only present in the interactions menu when enabled!",
                 false, // leave interaction enabled, we just won't add it at all when it's disabled state is met
-                () => { NotificationManagerClass.DisplayMessageNotification("Gone When Disabled Selected!"); }
+                () => { NotificationManager.DisplayMessageNotification("Gone When Disabled Selected!"); }
             );
 
             return new OnActionsAppliedResult(customExfilAction);
@@ -89,12 +90,12 @@ namespace InteractableExfilsAPI
                         // this does a decent job of maintaining good player feedback so they know why the interaction didn't work, while allowing you to capture
                         // the timing of the moment when the player selects the interaction.
                         // NOTE: this is exactly how the built in "Extract" toggle action itself is set up.
-                        NotificationManagerClass.DisplayWarningNotification("Debug mode not enabled!");
+                        NotificationManager.DisplayWarningNotification("Debug mode not enabled!");
                         Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ErrorMessage);
                         return;
                     }
 
-                    NotificationManagerClass.DisplayMessageNotification("Dynamic Disabled Example (soft) Selected!");
+                    NotificationManager.DisplayMessageNotification("Dynamic Disabled Example (soft) Selected!");
                 }
             );
 
