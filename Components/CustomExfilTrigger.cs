@@ -1,5 +1,6 @@
 ﻿using Comfort.Common;
 using EFT;
+using EFT.Communications;
 using EFT.Interactive;
 using EFT.UI;
 using HarmonyLib;
@@ -26,7 +27,7 @@ namespace InteractableExfilsAPI.Components
         // this is used to forbid the usage of the RefreshPrompt feature in the handler (to avoid infinite loop)
         internal bool LockedRefreshPrompt { get; set; } = false;
 
-        private List<ActionsTypesClass> VanillaBaseActions { get; set; } = [];
+        private List<InteractionAction> VanillaBaseActions { get; set; } = [];
         private bool _playerInTriggerArea = false;
 
         private InteractableExfilsSession _session;
@@ -102,7 +103,7 @@ namespace InteractableExfilsAPI.Components
             {
                 string tips = string.Join(", ", Exfil.GetTips(_session.MainPlayer.ProfileId));
                 ConsoleScreen.Log($"You have not met the extract requirements for {Exfil.Settings.Name}!");
-                NotificationManagerClass.DisplayWarningNotification($"{tips}");
+                NotificationManager.DisplayWarningNotification($"{tips}");
                 Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ErrorMessage);
                 return;
             }
@@ -132,16 +133,16 @@ namespace InteractableExfilsAPI.Components
             }
         }
 
-        internal void Init(ExfiltrationPoint exfil, bool exfilIsActiveToPlayer, List<ActionsTypesClass> vanillaBaseActions)
+        internal void Init(ExfiltrationPoint exfil, bool exfilIsActiveToPlayer, List<InteractionAction> vanillaBaseActions)
         {
             Exfil = exfil;
             ExfilIsActiveToPlayer = exfilIsActiveToPlayer;
             VanillaBaseActions = vanillaBaseActions;
         }
 
-        internal ActionsReturnClass CreateExfilPrompt()
+        internal AvailableInteractionState CreateExfilPrompt()
         {
-            ActionsReturnClass actionsReturn = _session.PlayerOwner.AvailableInteractionState.Value;
+            AvailableInteractionState actionsReturn = _session.PlayerOwner.AvailableInteractionState.Value;
 
             var selectedActionIndex = 0;
             if (actionsReturn != null)
@@ -164,9 +165,9 @@ namespace InteractableExfilsAPI.Components
                 OnExitZone = eventResult.OnExitZone;
             }
 
-            var actions = VanillaBaseActions.Concat(CustomExfilAction.GetActionsTypesClassList(eventResult.Actions)).ToList();
+            var actions = VanillaBaseActions.Concat(CustomExfilAction.GetInteractionActionList(eventResult.Actions)).ToList();
 
-            var newActionsReturn = new ActionsReturnClass { Actions = actions };
+            var newActionsReturn = new AvailableInteractionState { Actions = actions };
             int nbActions = actions.Count;
 
             if (nbActions == 0)
@@ -189,7 +190,7 @@ namespace InteractableExfilsAPI.Components
         {
             if (forceCreation || _session.PlayerOwner.AvailableInteractionState.Value != null)
             {
-                ActionsReturnClass exfilPrompt = CreateExfilPrompt();
+                AvailableInteractionState exfilPrompt = CreateExfilPrompt();
                 _session.PlayerOwner.AvailableInteractionState.Value = exfilPrompt;
             }
         }

@@ -1,10 +1,10 @@
 ﻿using EFT;
 using EFT.Interactive;
 using EFT.UI;
-using HarmonyLib;
 using InteractableExfilsAPI.Components;
 using InteractableExfilsAPI.Singletons;
 using SPT.Reflection.Patching;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -13,34 +13,16 @@ namespace InteractableExfilsAPI.Patches
 {
     internal class GetAvailableActionsPatch : ModulePatch
     {
-        private static MethodInfo _getExfiltrationActions;
-        private static MethodInfo _getSwitchActions;
-
         protected override MethodBase GetTargetMethod()
         {
-            _getExfiltrationActions = AccessTools.FirstMethod(
-                typeof(GetActionsClass),
-                method =>
-                method.GetParameters()[0].Name == "owner" &&
-                method.GetParameters()[1].ParameterType == typeof(ExfiltrationPoint)
-            );
-
-            _getSwitchActions = AccessTools.FirstMethod(
-                typeof(GetActionsClass),
-                method =>
-                method.GetParameters()[0].Name == "owner" &&
-                method.GetParameters()[1].ParameterType == typeof(Switch)
-            );
-
-            return AccessTools.FirstMethod(typeof(GetActionsClass), method => method.Name == nameof(GetActionsClass.GetAvailableActions) && method.GetParameters()[0].Name == "owner");
+            // Delegate cast resolves at compile time, build errors rather than runtime surprises.
+            return ((Func<GamePlayerOwner, IInteractive, AvailableInteractionState>)
+                InteractionContextHelper.GetAvailableActions).Method;
         }
 
         [PatchPrefix]
-        protected static bool PatchPrefix(object[] __args, ref ActionsReturnClass __result)
+        protected static bool PatchPrefix(GamePlayerOwner owner, IInteractive interactive, ref AvailableInteractionState __result)
         {
-            var owner = __args[0] as GamePlayerOwner;
-            var interactive = __args[1]; // as GInterface139 as of SPT 3.10.3
-
             if (IsInteractableExfil(interactive))
             {
                 ExfiltrationPoint exfil = GetExfilPointFromInteractive(interactive);
@@ -50,9 +32,9 @@ namespace InteractableExfilsAPI.Patches
                     return true;
                 }
 
-                List<ActionsTypesClass> vanillaActions = GetVanillaInteractionActions(owner, interactive);
+                List<InteractionAction> vanillaActions = GetVanillaInteractionActions(owner, interactive);
                 CustomExfilTrigger customTrigger = CreateCustomExfilTrigger(exfil, vanillaActions);
-                ActionsReturnClass prompt = customTrigger.CreateExfilPrompt();
+                AvailableInteractionState prompt = customTrigger.CreateExfilPrompt();
 
                 __result = prompt;
                 return false;
@@ -62,7 +44,7 @@ namespace InteractableExfilsAPI.Patches
         }
 
         // vanilla interactable exfils (elevator exfils and saferoom exfil)
-        private static bool IsInteractableExfil(object interactive)
+        private static bool IsInteractableExfil(IInteractive interactive)
         {
             // 1. check for car exfils
             if (interactive is ExfiltrationPoint point)
@@ -80,7 +62,7 @@ namespace InteractableExfilsAPI.Patches
             return false;
         }
 
-        private static ExfiltrationPoint GetExfilPointFromInteractive(object interactive)
+        private static ExfiltrationPoint GetExfilPointFromInteractive(IInteractive interactive)
         {
             if (interactive is Switch @switch) return @switch.ExfiltrationPoint;
             if (interactive is ExfiltrationPoint point) return point;
@@ -88,30 +70,24 @@ namespace InteractableExfilsAPI.Patches
             return null;
         }
 
-        private static List<ActionsTypesClass> GetVanillaInteractionActions(GamePlayerOwner gamePlayerOwner, object interactive)
+        private static List<InteractionAction> GetVanillaInteractionActions(GamePlayerOwner gamePlayerOwner, IInteractive interactive)
         {
             if (InteractableExfilsService.Instance().DisableVanillaActions)
             {
                 return [];
             }
 
-            object[] args = [gamePlayerOwner, interactive];
-
-            MethodInfo methodInfo = null;
-            if (interactive is ExfiltrationPoint)
+            AvailableInteractionState vanillaActions = interactive switch
             {
-                methodInfo = _getExfiltrationActions;
-            }
-            if (interactive is Switch)
-            {
-                methodInfo = _getSwitchActions;
-            }
+                ExfiltrationPoint point => InteractionContextHelper.GetAvailableActions(gamePlayerOwner, point),
+                Switch @switch => InteractionContextHelper.GetAvailableActions(gamePlayerOwner, @switch),
+                _ => null,
+            };
 
-            List<ActionsTypesClass> vanillaExfilActions = ((ActionsReturnClass)methodInfo.Invoke(null, args))?.Actions;
-            return vanillaExfilActions ?? [];
+            return vanillaActions?.Actions ?? [];
         }
 
-        private static CustomExfilTrigger CreateCustomExfilTrigger(ExfiltrationPoint exfil, List<ActionsTypesClass> vanillaActions)
+        private static CustomExfilTrigger CreateCustomExfilTrigger(ExfiltrationPoint exfil, List<InteractionAction> vanillaActions)
         {
             // Create a new GameObject to attach the MonoBehaviour
             GameObject customTriggerObject = new GameObject("CustomExfilTrigger");
@@ -122,7 +98,7 @@ namespace InteractableExfilsAPI.Patches
             bool exfilIsActiveToPlayer = true;
             customTrigger.Init(exfil, exfilIsActiveToPlayer, vanillaActions);
 
-            string message = $"GetActionsClassWithCustomActions called for exfil {exfil.Settings.Name}!\n";
+            string message = $"InteractionContextHelper.GetAvailableActions patched for exfil {exfil.Settings.Name}!\n";
             ConsoleScreen.Log(message);
             Plugin.LogSource.LogInfo(message);
 
