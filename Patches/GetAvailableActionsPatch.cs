@@ -1,10 +1,10 @@
 ﻿using EFT;
 using EFT.Interactive;
 using EFT.UI;
-using HarmonyLib;
 using InteractableExfilsAPI.Components;
 using InteractableExfilsAPI.Singletons;
 using SPT.Reflection.Patching;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -13,42 +13,16 @@ namespace InteractableExfilsAPI.Patches
 {
     internal class GetAvailableActionsPatch : ModulePatch
     {
-        private static MethodInfo _getExfiltrationActions;
-        private static MethodInfo _getSwitchActions;
-
         protected override MethodBase GetTargetMethod()
         {
-            _getExfiltrationActions = AccessTools.FirstMethod(
-                typeof(InteractionContextHelper),
-                method =>
-                method.GetParameters().Length >= 2 &&
-                method.GetParameters()[0].Name == "owner" &&
-                method.GetParameters()[1].ParameterType == typeof(ExfiltrationPoint)
-            );
-
-            _getSwitchActions = AccessTools.FirstMethod(
-                typeof(InteractionContextHelper),
-                method =>
-                method.GetParameters().Length >= 2 &&
-                method.GetParameters()[0].Name == "owner" &&
-                method.GetParameters()[1].ParameterType == typeof(Switch)
-            );
-
-            return AccessTools.FirstMethod(
-                typeof(InteractionContextHelper),
-                method =>
-                method.Name == nameof(InteractionContextHelper.GetAvailableActions) &&
-                method.GetParameters().Length >= 1 &&
-                method.GetParameters()[0].Name == "owner"
-            );
+            // Delegate cast resolves at compile time, build errors rather than runtime surprises.
+            return ((Func<GamePlayerOwner, IInteractive, AvailableInteractionState>)
+                InteractionContextHelper.GetAvailableActions).Method;
         }
 
         [PatchPrefix]
-        protected static bool PatchPrefix(object[] __args, ref AvailableInteractionState __result)
+        protected static bool PatchPrefix(GamePlayerOwner owner, IInteractive interactive, ref AvailableInteractionState __result)
         {
-            var owner = __args[0] as GamePlayerOwner;
-            var interactive = __args[1]; // as EFT.IInteractive as of SPT 4.1
-
             if (IsInteractableExfil(interactive))
             {
                 ExfiltrationPoint exfil = GetExfilPointFromInteractive(interactive);
@@ -70,7 +44,7 @@ namespace InteractableExfilsAPI.Patches
         }
 
         // vanilla interactable exfils (elevator exfils and saferoom exfil)
-        private static bool IsInteractableExfil(object interactive)
+        private static bool IsInteractableExfil(IInteractive interactive)
         {
             // 1. check for car exfils
             if (interactive is ExfiltrationPoint point)
@@ -88,7 +62,7 @@ namespace InteractableExfilsAPI.Patches
             return false;
         }
 
-        private static ExfiltrationPoint GetExfilPointFromInteractive(object interactive)
+        private static ExfiltrationPoint GetExfilPointFromInteractive(IInteractive interactive)
         {
             if (interactive is Switch @switch) return @switch.ExfiltrationPoint;
             if (interactive is ExfiltrationPoint point) return point;
@@ -96,27 +70,21 @@ namespace InteractableExfilsAPI.Patches
             return null;
         }
 
-        private static List<InteractionAction> GetVanillaInteractionActions(GamePlayerOwner gamePlayerOwner, object interactive)
+        private static List<InteractionAction> GetVanillaInteractionActions(GamePlayerOwner gamePlayerOwner, IInteractive interactive)
         {
             if (InteractableExfilsService.Instance().DisableVanillaActions)
             {
                 return [];
             }
 
-            object[] args = [gamePlayerOwner, interactive];
-
-            MethodInfo methodInfo = null;
-            if (interactive is ExfiltrationPoint)
+            AvailableInteractionState vanillaActions = interactive switch
             {
-                methodInfo = _getExfiltrationActions;
-            }
-            if (interactive is Switch)
-            {
-                methodInfo = _getSwitchActions;
-            }
+                ExfiltrationPoint point => InteractionContextHelper.GetAvailableActions(gamePlayerOwner, point),
+                Switch @switch => InteractionContextHelper.GetAvailableActions(gamePlayerOwner, @switch),
+                _ => null,
+            };
 
-            List<InteractionAction> vanillaExfilActions = ((AvailableInteractionState)methodInfo.Invoke(null, args))?.Actions;
-            return vanillaExfilActions ?? [];
+            return vanillaActions?.Actions ?? [];
         }
 
         private static CustomExfilTrigger CreateCustomExfilTrigger(ExfiltrationPoint exfil, List<InteractionAction> vanillaActions)
